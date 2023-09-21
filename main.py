@@ -168,7 +168,6 @@ def getBudgets(session_token):
         "Content-Type" : "application/json",
         "Session-Token" : f"{session_token}"
     }
-    logging.info(getUsersGroup(session_token))
 
     # Passage dans l'entitée racine, afin de récupérer tous les budgets et non pas uniquement celui de l'entitée dans laquelle on se trouve
     setRootEntity(session_token)
