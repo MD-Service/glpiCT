@@ -20,6 +20,8 @@ parser.add_argument('-p', dest='serveur_port', type=int, default=25,
                     help="Port du serveur email")
 parser.add_argument('-m', dest='serveur_smtp',
                     help="Adresse du serveur email")
+parser.add_argument('-d', dest='email_dest',
+                    help="Adresse email à qui envoyer l'alerte")
 args = parser.parse_args()
 
 # Formatage des messages pour la fonction logging
@@ -166,6 +168,8 @@ def getBudgets(session_token):
         "Content-Type" : "application/json",
         "Session-Token" : f"{session_token}"
     }
+    logging.info(getUsersGroup(session_token))
+
     # Passage dans l'entitée racine, afin de récupérer tous les budgets et non pas uniquement celui de l'entitée dans laquelle on se trouve
     setRootEntity(session_token)
     try:
@@ -205,9 +209,7 @@ def getBudgets(session_token):
             entity_tmp['budget_alerte']= round((args.seuil_alert * float(budget['value'])) / 100, 2)
             # Calcul du budget restant
             entity_tmp['total_remaining_budget']= entity_tmp['total_budget_allowed'] - entity_tmp['total_budget_spent']
-            # Récupération de la liste des personnes à qui envoyer l'alerte
-            entity_tmp['email_list']= budget['comment']
-            # ajout des données au tableau principal
+           # ajout des données au tableau principal
             entity_data.append(entity_tmp)
 
         return entity_data
@@ -224,7 +226,7 @@ def displayBudget(budget):
     logging.info('#############################################')
     logging.info(f"ID Budget : {budget['budget_id']}")
     logging.info(f"Entité : {budget['name']}")
-    logging.info(f"Destinataire(s) alerte : {budget['email_list']}")
+    logging.info(f"Destinataire(s) alerte : {args.email_dest}")
     logging.info(f"Total contrat d'heures : {budget['total_budget_allowed']}h")
     logging.info(f"Total utilisé : {budget['total_budget_spent']}h")
     logging.info(f"Total restant : {budget['total_remaining_budget']}h")
@@ -233,34 +235,30 @@ def displayBudget(budget):
 ##
 # Fonction d'envoi d'email si le pourcentage utilisé est arrivé au seuil ou le dépasse
 def alertEmail(budget):
-    receivers = budget['email_list'].split(';')
-    
-    for email in receivers:
-   
-        msg = EmailMessage()
-        msg['From'] = email
-        msg['To'] = email#", ".join(receivers)
-        msg['Subject'] = f"[Alerte {budget['name']}] - Contrat Heures GLPI" # Titre de l'email
-        # Contenu de l'email, en html
-        html_content = f"""
-        <html>
-          <head></head>
-          <body>
-            <p>Le contrat d'heures pour le client <a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}">{budget['name']}</a> est utilisé à {(budget['total_budget_spent'] * 100) / budget['total_budget_allowed']}%<br/>
-            Le total d'heures du contrat est de : {budget['total_budget_allowed']}h<br/>
-            Le total d'heures utilisés est de : {budget['total_budget_spent']}h<br/>
-            Le total d'heures restantes est de : {budget['total_remaining_budget']}h</p>
-          </body>
-        </html>
-        """
-        msg.set_content(html_content, subtype='html')
-        logging.info(f"Envoi d'email à {email}....")
-        try:
-            with smtplib.SMTP(args.serveur_smtp, args.serveur_port) as server:
-                server.send_message(msg)
-                logging.info('Envoi réussi!')
-        except:
-            logging.info("Erreur d'envoi d'email, vérifiez le serveur smtp")
+    msg = EmailMessage()
+    msg['From'] = args.email_dest
+    msg['To'] = args.email_dest#", ".join(receivers)
+    msg['Subject'] = f"[Alerte {budget['name']}] - Contrat Heures GLPI" # Titre de l'email
+    # Contenu de l'email, en html
+    html_content = f"""
+    <html>
+      <head></head>
+      <body>
+        <p>Le contrat d'heures pour le client <a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}">{budget['name']}</a> est utilisé à {(budget['total_budget_spent'] * 100) / budget['total_budget_allowed']}%<br/>
+        Le total d'heures du contrat est de : {budget['total_budget_allowed']}h<br/>
+        Le total d'heures utilisés est de : {budget['total_budget_spent']}h<br/>
+        Le total d'heures restantes est de : {budget['total_remaining_budget']}h</p>
+      </body>
+    </html>
+    """
+    msg.set_content(html_content, subtype='html')
+    logging.info(f"Envoi d'email à {email}....")
+    try:
+        with smtplib.SMTP(args.serveur_smtp, args.serveur_port) as server:
+            server.send_message(msg)
+            logging.info('Envoi réussi!')
+    except:
+        logging.info("Erreur d'envoi d'email, vérifiez le serveur smtp")
        
 #-------------------------------------------------------------#
 # Point d'entrée du programme
@@ -286,7 +284,11 @@ else:
     # alors on les parcours pour vérifier le seuil, s'il est atteint, on expédie l'email d'alerte
     if budgets:
         for budget in budgets:
-            displayBudget(budget)
-            if ((budget['total_budget_spent'] * 100) / budget['total_budget_allowed']) >= args.seuil_alert:
-                alertEmail(budget)
+            if budget['total_budget_allowed'] > 0:
+                displayBudget(budget)
+
+                if ((budget['total_budget_spent'] * 100) / budget['total_budget_allowed']) >= args.seuil_alert:
+                    alertEmail(budget)
+            else:
+                logging.info(f"Le contrat [{budget['name']}] est n'est pas défini. Il est configuré avec 0h")
 
