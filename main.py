@@ -57,33 +57,37 @@ def login():
 
     # Test d'utilisation du token avec la function getMyProfiles() (qui retourne les différents profils de l'utilisateur, ex: super-admin, technicien etc)
     # Si le token est expiré, il retourne la valeur suivante, il faut donc le réinitialiser
-    if 'ERROR_SESSION_TOKEN_INVALID' in getMyProfiles(session_token):
-        logging.info('Le Token a expiré !')
-        logging.info("Génération d'un nouveau Token ...")
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"user_token {args.api_token}"
-        }
-        try:
-            response = json.loads(
-                requests.get(url=args.glpi_url + config['api_url'] + config['endpoints']['getinitSession'],
-                             headers=headers).content)
-            # stockage du token généré dans le fichier session.token
-            with open("session.token", "w") as f:
-                f.write(response['session_token'])
-                f.close()
-                # renvoi, après l'execution de la fonction, le token
-            return True,response['session_token']
-        except:
-            # Si une erreur est rencontré pendant le login, ex erreur token API, alors le programme coupe.
-            logging.warning('ERROR: Connexion echouee !')
-            os.remove("session.token")
-            return False, {'Error': 'Erreur de connexion à GLPI !'}
+    getprofiles = getMyProfiles(session_token)
+    if getprofiles:
+        if 'ERROR_SESSION_TOKEN_INVALID' in getprofiles:
+            logging.info('Le Token a expiré !')
+            logging.info("Génération d'un nouveau Token ...")
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"user_token {args.api_token}"
+            }
+            try:
+                response = json.loads(
+                    requests.get(url=args.glpi_url + config['api_url'] + config['endpoints']['getinitSession'],
+                                 headers=headers).content)
+                # stockage du token généré dans le fichier session.token
+                with open("session.token", "w") as f:
+                    f.write(response['session_token'])
+                    f.close()
+                    # renvoi, après l'execution de la fonction, le token
+                return True,response['session_token']
+            except:
+                # Si une erreur est rencontré pendant le login, ex erreur token API, alors le programme coupe.
+                logging.warning('ERROR: Connexion echouee !')
+                os.remove("session.token")
+                return False, {'Error': 'Erreur de connexion à GLPI !'}
 
-    # S'il n'y a pas d'erreur, le token est toujours valide, on le renvoi
+        # S'il n'y a pas d'erreur, le token est toujours valide, on le renvoi
+        else:
+            if session_token:
+                return True, session_token
     else:
-        if session_token:
-            return True, session_token
+        return False, {'Error': 'Erreur de connexion à GLPI !'}
 
 
 ##
@@ -108,6 +112,7 @@ def getMyProfiles(session_token):
         return json.loads(requests.get(url=args.glpi_url + config['api_url'] + config['endpoints']['getMyProfiles'],
                                        headers=headers).content)
     except:
+        return False
         logging.error('ERROR: Impossible de récupérer les profils')
 
 
@@ -354,4 +359,5 @@ else:
             errorEmail(args.email_dest_sav, budgets['Error'])
     else:
         errorEmail(args.email_dest_sav, session_token['Error'])
+
 
