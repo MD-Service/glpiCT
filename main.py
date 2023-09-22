@@ -272,7 +272,7 @@ if not args.glpi_url or not args.api_token or not args.seuil_alert:
     logging.info("Erreur, lien de GLPI, Token ou seuil d'alerte manquant")
     parser.print_help()
     exit()
-elif not args.serveur_smtp or not args.serveur_port:
+elif not args.serveur_smtp or not args.serveur_port or not args.email_dest:
         logging.info("Erreur: La configuration email n'est pas complète")
         parser.print_help()
         exit()
