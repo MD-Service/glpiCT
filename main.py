@@ -251,7 +251,7 @@ def alertEmail(budget):
     </html>
     """
     msg.set_content(html_content, subtype='html')
-    logging.info(f"Envoi d'email à {email}....")
+    logging.info(f"Envoi d'email à {args.email_dest}....")
     try:
         with smtplib.SMTP(args.serveur_smtp, args.serveur_port) as server:
             server.send_message(msg)
