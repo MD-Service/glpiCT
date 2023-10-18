@@ -359,9 +359,9 @@ else:
 
                 else:
                     logging.info(f"Le contrat [{budget['name']}] est n'est pas défini. Il est configuré avec 0h")
+            alertEmail(email_content)
         else:
-            errorEmail(args.email_dest_sav, budgets['Error'])
+                        errorEmail(args.email_dest_sav, budgets['Error'])
     else:
         errorEmail(args.email_dest_sav, session_token['Error'])
 
-alertEmail(email_content)
