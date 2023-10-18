@@ -25,6 +25,8 @@ parser.add_argument('-d', dest='email_dest',
                     help="Adresse email à qui envoyer l'alerte")
 parser.add_argument('--sav', dest='email_dest_sav',
                     help="Adresse email à qui envoyer l'alerte lors d'erreurs")
+parser.add_argument('--savfrom', dest='email_from_sav',
+                    help="Adresse email expeditrice qui envoit l'alerte lors d'erreurs")
 args = parser.parse_args()
 
 # Formatage des messages pour la fonction logging
@@ -45,7 +47,6 @@ def getConfig():
 ##
 # Stockage du tableau config dans une variable
 config = getConfig()
-
 
 ##
 # Connexion à GLPI
@@ -292,7 +293,7 @@ def alertEmail(content):
 def errorEmail(dest, errors):
     if not dest == None:
         msg = EmailMessage()
-        msg['From'] = dest #config['email_errors']
+        msg['From'] = args.email_from_sav #config['email_errors']
         msg['To'] = dest #config['email_errors']  # ", ".join(receivers)
         msg['Subject'] = f"[GLPI_CT][Erreur] - Contrat Heures GLPI"  # Titre de l'email
         # Contenu de l'email, en html
