@@ -258,26 +258,22 @@ def displayBudget(budget):
     logging.info(f"Total contrat d'heures : {budget['total_budget_allowed']}h")
     logging.info(f"Total utilisé : {budget['total_budget_spent']}h")
     logging.info(f"Total restant : {budget['total_remaining_budget']}h")
-    logging.info(f"Pourcentage utilisé : {(budget['total_budget_spent'] * 100) / budget['total_budget_allowed']}%")
+    logging.info(f"Pourcentage utilisé : {round((budget['total_budget_spent'] * 100) / budget['total_budget_allowed'],2)}%")
     logging.info('#############################################')
-
 
 ##
 # Fonction d'envoi d'email si le pourcentage utilisé est arrivé au seuil ou le dépasse
-def alertEmail(budget):
+def alertEmail(content):
     msg = EmailMessage()
     msg['From'] = args.email_dest
     msg['To'] = args.email_dest  # ", ".join(receivers)
-    msg['Subject'] = f"[Alerte {budget['name']}] - Contrat Heures GLPI"  # Titre de l'email
+    msg['Subject'] = f"[Alerte Budgets] - Contrat Heures GLPI"  # Titre de l'email
     # Contenu de l'email, en html
     html_content = f"""
     <html>
       <head></head>
       <body>
-        <p>Le contrat d'heures pour le client <a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}">{budget['name']}</a> est utilisé à {(budget['total_budget_spent'] * 100) / budget['total_budget_allowed']}%<br/>
-        Le total d'heures du contrat est de : {budget['total_budget_allowed']}h<br/>
-        Le total d'heures utilisés est de : {budget['total_budget_spent']}h<br/>
-        Le total d'heures restantes est de : {budget['total_remaining_budget']}h</p>
+        {content}
       </body>
     </html>
     """
@@ -329,6 +325,7 @@ def errorEmail(dest, errors):
 logging.info('#-------------------------------------------------------#')
 logging.info('#---------------- GLPI Contract Tracker ----------------#')
 logging.info('#-------------------------------------------------------#')
+email_content = """"""
 
 if not args.glpi_url or not args.api_token or not args.seuil_alert:
     logging.info("Erreur, lien de GLPI, Token ou seuil d'alerte manquant")
@@ -352,7 +349,14 @@ else:
                     displayBudget(budget)
 
                     if ((budget['total_budget_spent'] * 100) / budget['total_budget_allowed']) >= args.seuil_alert:
-                        alertEmail(budget)
+                        email_content += f"""
+                                <p>Le contrat d'heures pour le client <a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}">{budget['name']}</a> est utilisé à {round((budget['total_budget_spent'] * 100) / budget['total_budget_allowed'],2)}%<br/>
+                                Le total d'heures du contrat est de : {budget['total_budget_allowed']}h<br/>
+                                Le total d'heures utilisés est de : {budget['total_budget_spent']}h<br/>
+                                Le total d'heures restantes est de : {budget['total_remaining_budget']}h</p>
+                            """
+
+
                 else:
                     logging.info(f"Le contrat [{budget['name']}] est n'est pas défini. Il est configuré avec 0h")
         else:
@@ -360,4 +364,4 @@ else:
     else:
         errorEmail(args.email_dest_sav, session_token['Error'])
 
-
+alertEmail(email_content)
