@@ -351,13 +351,20 @@ else:
 
                     if ((budget['total_budget_spent'] * 100) / budget['total_budget_allowed']) >= args.seuil_alert:
                         email_content += f"""
-                                <p>Le contrat d'heures pour le client <a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}">{budget['name']}</a> est utilisé à {round((budget['total_budget_spent'] * 100) / budget['total_budget_allowed'],2)}%<br/>
-                                Le total d'heures du contrat est de : {budget['total_budget_allowed']}h<br/>
-                                Le total d'heures utilisés est de : {budget['total_budget_spent']}h<br/>
-                                Le total d'heures restantes est de : {budget['total_remaining_budget']}h</p>
+                                <p>Le contrat d'heures pour le client <a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}"><strong>{budget['name']}</strong></a> est utilisé à <strong>{round((budget['total_budget_spent'] * 100) / budget['total_budget_allowed'],2)}%</strong><br/>
+                                Le total d'heures du contrat est de : <strong>{budget['total_budget_allowed']}h</strong><br/>
+                                Le total d'heures utilisés est de : <strong>{budget['total_budget_spent']}h</strong><br/>
+                                Le total d'heures restantes est de : <strong>{budget['total_remaining_budget']}h</strong></p>
                             """
-
-
+                #Ajout d'un cas, où si un contrat n'est pas encore vendu, mais des heures sont en cours, alors le budget étant à 0, la division ne passe pas.
+                #Cela permet quand même de remonter l'info que le budget a des heures en cours.
+                elif budget['total_budget_allowed'] == 0 and budget['total_budget_spent'] > 0:
+                    email_content += f"""
+                                <p>Le contrat d'heures pour le client <a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}"><strong>{budget['name']}</strong></a> est utilisé à <strong>{round((budget['total_budget_spent'] * 100) / 1, 2)}%</strong><br/>
+                                Le total d'heures du contrat est de : <strong>{budget['total_budget_allowed']}h</strong><br/>
+                                Le total d'heures utilisés est de : <strong>{budget['total_budget_spent']}h</strong><br/>
+                                Le total d'heures restantes est de : <strong>{budget['total_remaining_budget']}h</strong></p>
+                            """
                 else:
                     logging.info(f"Le contrat [{budget['name']}] est n'est pas défini. Il est configuré avec 0h")
             alertEmail(email_content)
