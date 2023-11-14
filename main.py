@@ -259,7 +259,10 @@ def displayBudget(budget):
     logging.info(f"Total contrat d'heures : {budget['total_budget_allowed']}h")
     logging.info(f"Total utilisé : {budget['total_budget_spent']}h")
     logging.info(f"Total restant : {budget['total_remaining_budget']}h")
-    logging.info(f"Pourcentage utilisé : {round((budget['total_budget_spent'] * 100) / budget['total_budget_allowed'],2)}%")
+    if budget['total_budget_allowed'] > 0:
+        logging.info(f"Pourcentage utilisé : {round((budget['total_budget_spent'] * 100) / budget['total_budget_allowed'],2)}%")
+    else:
+        logging.info(f"Pourcentage utilisé : {round((budget['total_budget_spent'] * 100) / 1,2)}%")
     logging.info('#############################################')
 
 ##
@@ -270,10 +273,25 @@ def alertEmail(content):
     msg['To'] = args.email_dest  # ", ".join(receivers)
     msg['Subject'] = f"[Alerte Budgets] - Contrat Heures GLPI"  # Titre de l'email
     # Contenu de l'email, en html
-    html_content = f"""
+    html_content = """
     <html>
       <head></head>
       <body>
+      <style>
+        table, th, td{
+            border: 1px solid;
+            padding: 2px 5px;
+        }
+        table{
+          border-collapse: collapse;
+        }
+        .text-center {
+            text-align: center;
+        }
+        
+      </style>
+      """
+    html_content += f"""
         {content}
       </body>
     </html>
@@ -344,29 +362,81 @@ else:
 
         # Si la récupération des budgets a fonctionnée,
         # alors on les parcours pour vérifier le seuil, s'il est atteint, on expédie l'email d'alerte
+
         if getBudgets_statut:
-            for budget in budgets:
+            ordered_budgets = sorted(budgets, key=lambda d: d['name'])
+            total_alert_contrats = 0
+            nb_total_heures_contrats = 0
+            nb_total_heures_a_fact = 0
+            nb_total_heures_a_utiliser = 0
+            for budget in ordered_budgets:
+
+                displayBudget(budget)
+                # Nombres d'heures total assignées aux contrats
+                nb_total_heures_contrats += budget['total_budget_allowed']
+
+                if budget['total_remaining_budget'] > 0:
+                    # Nombres d'heures restantes à utiliser
+                    nb_total_heures_a_utiliser += budget['total_remaining_budget']
+                else:
+                    # Nombres d'heures non facturées
+                    nb_total_heures_a_fact += budget['total_remaining_budget']
+
                 if budget['total_budget_allowed'] > 0:
-                    displayBudget(budget)
 
                     if ((budget['total_budget_spent'] * 100) / budget['total_budget_allowed']) >= args.seuil_alert:
-                        email_content += f"""
-                                <p>Le contrat d'heures pour le client <a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}"><strong>{budget['name']}</strong></a> est utilisé à <strong>{round((budget['total_budget_spent'] * 100) / budget['total_budget_allowed'],2)}%</strong><br/>
-                                Le total d'heures du contrat est de : <strong>{budget['total_budget_allowed']}h</strong><br/>
-                                Le total d'heures utilisés est de : <strong>{budget['total_budget_spent']}h</strong><br/>
-                                Le total d'heures restantes est de : <strong>{budget['total_remaining_budget']}h</strong></p>
+                        total_alert_contrats += 1
+                        email_content += f"""<tr>
+                                <td><a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}"><strong>{budget['name']}</strong></a></td>
+                                <td class="text-center">{round((budget['total_budget_spent'] * 100) / budget['total_budget_allowed'])}%</td>
+                                <td class="text-center">{budget['total_budget_allowed']}h</td>
+                                <td class="text-center">{budget['total_budget_spent']}h</td>
+                                <td class="text-center">{budget['total_remaining_budget']}h</td>
+                                </tr>
                             """
                 #Ajout d'un cas, où si un contrat n'est pas encore vendu, mais des heures sont en cours, alors le budget étant à 0, la division ne passe pas.
                 #Cela permet quand même de remonter l'info que le budget a des heures en cours.
                 elif budget['total_budget_allowed'] == 0 and budget['total_budget_spent'] > 0:
-                    email_content += f"""
-                                <p>Le contrat d'heures pour le client <a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}"><strong>{budget['name']}</strong></a> est utilisé à <strong>{round((budget['total_budget_spent'] * 100) / 1, 2)}%</strong><br/>
-                                Le total d'heures du contrat est de : <strong>{budget['total_budget_allowed']}h</strong><br/>
-                                Le total d'heures utilisés est de : <strong>{budget['total_budget_spent']}h</strong><br/>
-                                Le total d'heures restantes est de : <strong>{budget['total_remaining_budget']}h</strong></p>
-                            """
+                    total_alert_contrats += 1
+                    email_content += f"""<tr>
+                            <td><a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}"><strong>{budget['name']}</strong></a></td>
+                            <td class="text-center">{round((budget['total_budget_spent'] * 100) / 1)}%</td>
+                            <td class="text-center">{budget['total_budget_allowed']}h</td>
+                            <td class="text-center">{budget['total_budget_spent']}h</td>
+                            <td class="text-center">{budget['total_remaining_budget']}h</td>
+                            </tr>
+                        """
                 else:
                     logging.info(f"Le contrat [{budget['name']}] est n'est pas défini. Il est configuré avec 0h")
+            email_content_top = f"""
+                                <p>
+                                <table>
+                                    <tr>
+                                        <th class="text-center">Nombre total de contrats</th>
+                                        <th class="text-center">Nombres d'heures totales</th>
+                                        <th class="text-center">Nombres d'heures restantes (à utiliser) </th>
+                                        <th class="text-center">Nombres d'heures non facturées</th>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">{total_alert_contrats}/{len(ordered_budgets)}</td>
+                                        <td class="text-center">{nb_total_heures_contrats}h</td>
+                                        <td class="text-center">{nb_total_heures_a_utiliser}h</td>
+                                        <td class="text-center">{nb_total_heures_a_fact}h</td>
+                                    </tr>
+                                </table>
+                                </p>
+                                <br/>
+                                <p>
+                                <table>
+                                    <tr>
+                                        <th class="text-center">Nom du client</th>
+                                        <th class="text-center">Utilisation</th>
+                                        <th class="text-center">Heures vendues</th>
+                                        <th class="text-center">Heures utilisées</th>
+                                        <th class="text-center">Solde</th>
+                                    </tr>                               
+                """
+            email_content = email_content_top+email_content + "</table></p>"
             alertEmail(email_content)
         else:
                         errorEmail(args.email_dest_sav, budgets['Error'])

@@ -6,7 +6,7 @@ endpoints:
     getMyProfiles: getMyProfiles # Liste les Profiles de l'utilisateur connecté
     changeActiveProfile: changeActiveProfile # Change de profil pour l'utilisateur connecté
     changeActiveEntities: changeActiveEntities # Change d'entitée pour l'utilisateur connecté
-    getBudget: Budget # Récupère la liste des budgets
+    getBudget: Budget?range=0-990 # Récupère la liste des budgets
     
 # Profil ayant les droits de consultation du buget. Peut être modifié afin de limiter les droits du compte sur l'API
 # Le profil est optionnel, si le compte a plusieurs profils, le nom du profil peut être renseigné. Sinon laisser vide.
