@@ -1,6 +1,6 @@
 ## GLPI Contrat Tracker - Config
 
-	usage: main.py [-h] [-u GLPI_URL] [-t API_TOKEN] [-s SEUIL_ALERT] [-p SERVEUR_PORT] [-m SERVEUR_SMTP] [-d EMAIL_DEST] [--sav sav@email.local] [--savfrom admin@email.local]
+	usage: main.py [-h] [-u GLPI_URL] [-t API_TOKEN] [-s SEUIL_ALERT] [-p SERVEUR_PORT] [-m SERVEUR_SMTP] [-d EMAIL_DEST] [--sav sav@email.local] [--savfrom admin@email.local] [--verbose]
 
 	GLPI Contrat Tracker - Config
 
@@ -14,6 +14,7 @@
 	  -d EMAIL_DEST  Adresse email à qui envoyer l'alerte (ou liste de distribution)
 	  --sav EMAIL_SAV_DEST  Adresse email à qui envoyer les erreurs de config (login ou récupération de budgets)
       --savfrom EMAIL_SAV_FROM Adresse email expeditrice qui envoit l'alerte lors d'erreurs
+      --verbose active le mode verbose
 exemple : 
 
-    main.py -u https://SiteURL.com/glpi -t USER_API_TOKEN -s 80 -m srvemail.com -p 25 -d email@email.local --sav sav@email.local --savfrom admin@email.local
+    main.py -u https://SiteURL.com/glpi -t USER_API_TOKEN -s 80 -m srvemail.com -p 25 -d email@email.local --sav sav@email.local --savfrom admin@email.local --verbose
