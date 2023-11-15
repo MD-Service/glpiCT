@@ -9,6 +9,7 @@ from email.mime.text import MIMEText
 from email.message import EmailMessage
 import argparse
 import os
+from datetime import datetime
 
 parser = argparse.ArgumentParser(description='GLPI Contrat Tracker - Config')
 parser.add_argument('-u', dest='glpi_url',
@@ -27,11 +28,13 @@ parser.add_argument('--sav', dest='email_dest_sav',
                     help="Adresse email à qui envoyer l'alerte lors d'erreurs")
 parser.add_argument('--savfrom', dest='email_from_sav',
                     help="Adresse email expeditrice qui envoit l'alerte lors d'erreurs")
+parser.add_argument('--verbose', dest='verbose', action='store_true',
+                    help="Affiche le mode verbose")
 args = parser.parse_args()
 
 # Formatage des messages pour la fonction logging
 FORMAT_DEBUG = '%(asctime)s - %(levelname)s - %(message)s'
-FORMAT_INFO = '%(levelname)s - %(message)s'
+FORMAT_INFO = '%(asctime)s - %(levelname)s - %(message)s'
 logging.basicConfig(format=FORMAT_INFO, level=logging.INFO)
 
 
@@ -271,7 +274,7 @@ def alertEmail(content):
     msg = EmailMessage()
     msg['From'] = args.email_dest
     msg['To'] = args.email_dest  # ", ".join(receivers)
-    msg['Subject'] = f"[Alerte Budgets] - Contrat Heures GLPI"  # Titre de l'email
+    msg['Subject'] = f"[Alerte Budgets][{datetime.now().strftime('%d/%m/%Y')}] - Contrat Heures GLPI"  # Titre de l'email
     # Contenu de l'email, en html
     html_content = """
     <html>
@@ -313,7 +316,7 @@ def errorEmail(dest, errors):
         msg = EmailMessage()
         msg['From'] = args.email_from_sav #config['email_errors']
         msg['To'] = dest #config['email_errors']  # ", ".join(receivers)
-        msg['Subject'] = f"[GLPI_CT][Erreur] - Contrat Heures GLPI"  # Titre de l'email
+        msg['Subject'] = f"[GLPI_CT][Erreur][{datetime.now().strftime('%d/%m/%Y')}] - Contrat Heures GLPI"  # Titre de l'email
         # Contenu de l'email, en html
         html_content = f"""
             <html>
@@ -370,8 +373,8 @@ else:
             nb_total_heures_a_fact = 0
             nb_total_heures_a_utiliser = 0
             for budget in ordered_budgets:
-
-                displayBudget(budget)
+                if args.verbose:
+                    displayBudget(budget)
                 # Nombres d'heures total assignées aux contrats
                 nb_total_heures_contrats += budget['total_budget_allowed']
 
@@ -407,7 +410,8 @@ else:
                             </tr>
                         """
                 else:
-                    logging.info(f"Le contrat [{budget['name']}] est n'est pas défini. Il est configuré avec 0h")
+                    if args.verbose:
+                        logging.info(f"Le contrat [{budget['name']}] est n'est pas défini. Il est configuré avec 0h")
             email_content_top = f"""
                                 <p>
                                 <table>
