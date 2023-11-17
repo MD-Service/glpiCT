@@ -32,6 +32,7 @@ parser.add_argument('--verbose', dest='verbose', action='store_true',
                     help="Affiche le mode verbose")
 args = parser.parse_args()
 
+
 # Formatage des messages pour la fonction logging
 FORMAT_DEBUG = '%(asctime)s - %(levelname)s - %(message)s'
 FORMAT_INFO = '%(asctime)s - %(levelname)s - %(message)s'
