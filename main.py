@@ -171,23 +171,23 @@ def getCurrentBudget(session_token, budget_id):
     cookies = {
         f"{config['cookie_glpi']}": f"{session_token}"
     }
+
     # Assignation du token de la session dans les cookies de la requete
-    response = requests.get(
-        f"{args.glpi_url}/ajax/common.tabs.php?_target=/glpi/front/budget.form.php&_itemtype=Budget&_glpi_tab=Budget$1&id={budget_id}&withtemplate=&formoptions=data-track-changes^%^3Dtrue",
-        cookies=cookies).text
+    response = requests.get(f"{args.glpi_url}/ajax/common.tabs.php?_target=/glpi/front/budget.form.php&_itemtype=Budget&_glpi_tab=Budget$2&id={budget_id}&withtemplate=&formoptions=data-track-changes%3Dtrue", cookies=cookies).text
     # valeur par défaut du budget
     total_spent_on_budget = 0
     total_remaining_on_budget = 0
     loop_total_spent_budget = False
     loop_total_remaining_budget = False
     # Parsing du HTML pour récupérer la valeur
-    for tr in html_to_json.convert(response)["div"][0]["table"][0]["tr"]:
-        if 'td' in tr:
-            for td in tr['td']:
-                if 'numeric' in td['_attributes']['class']:
-                    total_spent_on_budget = td['_value']
 
-    # retourne la valeur du budget
+    desired_key = 5
+    try:
+        total_spent_on_budget  =html_to_json.convert(response)["div"][0]["table"][0]["tr"][2]['td'][desired_key]["_value"]
+    except:
+        total_spent_on_budget = 0
+
+        # retourne la valeur du budget
     return total_spent_on_budget
 
 
@@ -201,53 +201,54 @@ def getBudgets(session_token):
 
     # Passage dans l'entitée racine, afin de récupérer tous les budgets et non pas uniquement celui de l'entitée dans laquelle on se trouve
     setRootEntity(session_token)
-    try:
-        response = json.loads(requests.get(url=args.glpi_url + config['api_url'] + config['endpoints']['getBudget'],
-                                           headers=headers).content)
-        # Si lors de la requete, l'utilisateur (api_token) n'est pas en administrateur, ou avec les droits necessaires pour consulter la partie 'Budget'
-        # la requete retourne une erreur de droit, switch automatique sur le profil "Super-Admin" de l'utilisateur
-        if 'ERROR_RIGHT_MISSING' in response:
-            logging.warning(f"ERROR: {response[1]}")
-            logging.info("Tentative de changement de profil....")
-            user_profiles = getMyProfiles(session_token)
-            for profile in user_profiles['myprofiles']:
-                if config['PROFIL_CONSULTATION_BUDGET'] in profile['name']:
-                    if changeActiveProfiles(session_token, profile['id']):
-                        # Une fois le profil changé, on relance la demande de budget
-                        response = json.loads(
-                            requests.get(url=args.glpi_url + config['api_url'] + config['endpoints']['getBudget'],
-                                         headers=headers).content)
+    #try:
+    response = json.loads(requests.get(url=args.glpi_url + config['api_url'] + config['endpoints']['getBudget'],
+                                       headers=headers).content)
+    # Si lors de la requete, l'utilisateur (api_token) n'est pas en administrateur, ou avec les droits necessaires pour consulter la partie 'Budget'
+    # la requete retourne une erreur de droit, switch automatique sur le profil "Super-Admin" de l'utilisateur
+    if 'ERROR_RIGHT_MISSING' in response:
+        logging.warning(f"ERROR: {response[1]}")
+        logging.info("Tentative de changement de profil....")
+        user_profiles = getMyProfiles(session_token)
+        for profile in user_profiles['myprofiles']:
+            if config['PROFIL_CONSULTATION_BUDGET'] in profile['name']:
+                if changeActiveProfiles(session_token, profile['id']):
+                    # Une fois le profil changé, on relance la demande de budget
+                    response = json.loads(
+                        requests.get(url=args.glpi_url + config['api_url'] + config['endpoints']['getBudget'],
+                                     headers=headers).content)
 
-        entity_data = []
-        # On stocke ensuite les données voulues dans un tableau.
-        # Chaque entitée est créée dans une nouvelle entrée du tableau
-        for budget in response:
+    entity_data = []
+    # On stocke ensuite les données voulues dans un tableau.
+    # Chaque entitée est créée dans une nouvelle entrée du tableau
+    for budget in response:
 
-            entity_tmp = {}
-            entity_tmp['budget_id'] = budget['id']
-            entity_tmp['entity_id'] = budget['entities_id']
-            for link in budget['links']:
-                # On parcoure les liens associés à l'entité,
-                # Si l'un d'entre eux contient "Entity", on récupère les informations comme le Nom de l'entité.
-                if link['rel'] == "Entity":
-                    entity_tmp['name'] = json.loads(requests.get(url=link['href'], headers=headers).content)['name']
+        entity_tmp = {}
+        entity_tmp['budget_id'] = budget['id']
+        entity_tmp['entity_id'] = budget['entities_id']
+        for link in budget['links']:
+            # On parcoure les liens associés à l'entité,
+            # Si l'un d'entre eux contient "Entity", on récupère les informations comme le Nom de l'entité.
+            if link['rel'] == "Entity":
+                entity_tmp['name'] = json.loads(requests.get(url=link['href'], headers=headers).content)['name']
 
-            entity_tmp['total_budget_allowed'] = float(budget['value'])
-            # Récupération du budget utilisé
-            entity_tmp['total_budget_spent'] = float(getCurrentBudget(session_token, entity_tmp['budget_id']))
-            # Calcul du pourcentage utilisé
-            entity_tmp['budget_alerte'] = round((args.seuil_alert * float(budget['value'])) / 100, 2)
-            # Calcul du budget restant
-            entity_tmp['total_remaining_budget'] = entity_tmp['total_budget_allowed'] - entity_tmp['total_budget_spent']
-            # ajout des données au tableau principal
-            entity_data.append(entity_tmp)
-
-        return True, entity_data
+        entity_tmp['total_budget_allowed'] = float(budget['value'])
+        # Récupération du budget utilisé
+        entity_tmp['total_budget_spent'] = float(getCurrentBudget(session_token, entity_tmp['budget_id']))
+        # Calcul du pourcentage utilisé
+        entity_tmp['budget_alerte'] = round((args.seuil_alert * float(budget['value'])) / 100, 2)
+        # Calcul du budget restant
+        entity_tmp['total_remaining_budget'] = entity_tmp['total_budget_allowed'] - entity_tmp['total_budget_spent']
+        # ajout des données au tableau principal
+        entity_data.append(entity_tmp)
 
 
-    except:
-        logging.warning('ERROR: Impossible de récupérer les budgets !')
-        return False, {'Error': 'Erreur lors de la récupération des budgets'}
+    return True, entity_data
+
+
+    #except:
+    logging.warning('ERROR: Impossible de récupérer les budgets !')
+    return False, {'Error': 'Erreur lors de la récupération des budgets'}
 
 
 ##

@@ -7,7 +7,7 @@ endpoints:
     changeActiveProfile: changeActiveProfile # Change de profil pour l'utilisateur connecté
     changeActiveEntities: changeActiveEntities # Change d'entitée pour l'utilisateur connecté
     getBudget: Budget?range=0-990 # Récupère la liste des budgets
-    
+
 # Profil ayant les droits de consultation du buget. Peut être modifié afin de limiter les droits du compte sur l'API
 # Le profil est optionnel, si le compte a plusieurs profils, le nom du profil peut être renseigné. Sinon laisser vide.
 PROFIL_CONSULTATION_BUDGET: ""
@@ -15,7 +15,9 @@ PROFIL_CONSULTATION_BUDGET: ""
 # Nom du cookie GLPI stockant le session.token - Le nom est à modifier s'il change après une MàJ de GLPI
 # pour le retrouver, lancer un navigateur Web avec le menu développeur, dans l'onglet réseau,
 # cliquer sur une page glpi, et affichez les cookies de la page.
-cookie_glpi: "glpi_203f8090b9bdc5d960abb0e1aa34c05f"
+#cookie_glpi: "glpi_203f8090b9bdc5d960abb0e1aa34c05f" #GLPI 10.0.7
+cookie_glpi: "glpi_6351febeaae63f5f0de9eb2e23ce5b1b" #GLPI 10.0.10
 
 # ne pas toucher, utilisé pour le parsing
 total_spent_budget: "Total dépensé sur le budget"
+
