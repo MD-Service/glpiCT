@@ -32,7 +32,6 @@ parser.add_argument('--verbose', dest='verbose', action='store_true',
                     help="Affiche le mode verbose")
 args = parser.parse_args()
 
-
 # Formatage des messages pour la fonction logging
 FORMAT_DEBUG = '%(asctime)s - %(levelname)s - %(message)s'
 FORMAT_INFO = '%(asctime)s - %(levelname)s - %(message)s'
@@ -174,21 +173,27 @@ def getCurrentBudget(session_token, budget_id):
     }
 
     # Assignation du token de la session dans les cookies de la requete
-    response = requests.get(f"{args.glpi_url}/ajax/common.tabs.php?_target=/glpi/front/budget.form.php&_itemtype=Budget&_glpi_tab=Budget$2&id={budget_id}&withtemplate=&formoptions=data-track-changes%3Dtrue", cookies=cookies).text
+    response = requests.get(f"{args.glpi_url}/ajax/common.tabs.php?_target=/glpi/front/budget.form.php&_itemtype=Budget&_glpi_tab=Budget$1&id={budget_id}&withtemplate=&formoptions=data-track-changes%3Dtrue", cookies=cookies).text
     # valeur par défaut du budget
     total_spent_on_budget = 0
     total_remaining_on_budget = 0
     loop_total_spent_budget = False
     loop_total_remaining_budget = False
+
     # Parsing du HTML pour récupérer la valeur
+    foundValue = False
+    for tr in html_to_json.convert(response)["div"][0]["table"][0]["tr"]:
+        if 'td' in tr:
+            for td in tr['td']:
+                if '_value' in td:
+                    if td['_value'] == 'Total dépensé sur le budget': #Détection de la ligne "Total dépensé sur le budget, si on toute la valeur, alors la prochaine valeur du tableau sera le total
+                        foundValue = True
+                        continue
+                    if foundValue:
+                        total_spent_on_budget = td['_value']
+                        foundValue = False
 
-    desired_key = 5
-    try:
-        total_spent_on_budget  =html_to_json.convert(response)["div"][0]["table"][0]["tr"][2]['td'][desired_key]["_value"]
-    except:
-        total_spent_on_budget = 0
-
-        # retourne la valeur du budget
+    # retourne la valeur du budget
     return total_spent_on_budget
 
 
@@ -223,7 +228,7 @@ def getBudgets(session_token):
     # On stocke ensuite les données voulues dans un tableau.
     # Chaque entitée est créée dans une nouvelle entrée du tableau
     for budget in response:
-
+        print(f"Récupération du contrat ID : {budget['id']} / {len(response)}", end="\r", flush=True)
         entity_tmp = {}
         entity_tmp['budget_id'] = budget['id']
         entity_tmp['entity_id'] = budget['entities_id']
@@ -242,6 +247,7 @@ def getBudgets(session_token):
         entity_tmp['total_remaining_budget'] = entity_tmp['total_budget_allowed'] - entity_tmp['total_budget_spent']
         # ajout des données au tableau principal
         entity_data.append(entity_tmp)
+
 
 
     return True, entity_data
@@ -265,7 +271,7 @@ def displayBudget(budget):
     logging.info(f"Total utilisé : {budget['total_budget_spent']}h")
     logging.info(f"Total restant : {budget['total_remaining_budget']}h")
     if budget['total_budget_allowed'] > 0:
-        logging.info(f"Pourcentage utilisé : {round((budget['total_budget_spent'] * 100) / budget['total_budget_allowed'],2)}%")
+                logging.info(f"Pourcentage utilisé : {round((budget['total_budget_spent'] * 100) / budget['total_budget_allowed'],2)}%")
     else:
         logging.info(f"Pourcentage utilisé : {round((budget['total_budget_spent'] * 100) / 1,2)}%")
     logging.info('#############################################')
@@ -402,15 +408,16 @@ else:
                 #Ajout d'un cas, où si un contrat n'est pas encore vendu, mais des heures sont en cours, alors le budget étant à 0, la division ne passe pas.
                 #Cela permet quand même de remonter l'info que le budget a des heures en cours.
                 elif budget['total_budget_allowed'] == 0 and budget['total_budget_spent'] > 0:
-                    total_alert_contrats += 1
-                    email_content += f"""<tr>
-                            <td><a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}"><strong>{budget['name']}</strong></a></td>
-                            <td class="text-center">{round((budget['total_budget_spent'] * 100) / 1)}%</td>
-                            <td class="text-center">{budget['total_budget_allowed']}h</td>
-                            <td class="text-center">{budget['total_budget_spent']}h</td>
-                            <td class="text-center">{budget['total_remaining_budget']}h</td>
-                            </tr>
-                        """
+                    if((budget['total_budget_spent'] * 100) / 1) >= args.seuil_alert:
+                        total_alert_contrats += 1
+                        email_content += f"""<tr>
+                                <td><a href="{args.glpi_url}/front/budget.form.php?id={budget['budget_id']}"><strong>{budget['name']}</strong></a></td>
+                                <td class="text-center">{round((budget['total_budget_spent'] * 100) / 1)}%</td>
+                                <td class="text-center">{budget['total_budget_allowed']}h</td>
+                                <td class="text-center">{budget['total_budget_spent']}h</td>
+                                <td class="text-center">{budget['total_remaining_budget']}h</td>
+                                </tr>
+                            """
                 else:
                     if args.verbose:
                         logging.info(f"Le contrat [{budget['name']}] est n'est pas défini. Il est configuré avec 0h")
