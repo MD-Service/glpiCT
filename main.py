@@ -182,8 +182,8 @@ def getCurrentBudget(session_token, budget_id):
 
     # Parsing du HTML pour récupérer la valeur
     foundValue = False
-    for tr in html_to_json.convert(response)["div"][0]["table"][0]["tr"]:
-        if 'td' in tr:
+    for tr in html_to_json.convert(response)["div"][0]["table"][0]["tfoot"][0]['tr']:
+        if 'td' in tr:            
             for td in tr['td']:
                 if '_value' in td:
                     if td['_value'] == 'Total dépensé sur le budget': #Détection de la ligne "Total dépensé sur le budget, si on toute la valeur, alors la prochaine valeur du tableau sera le total
@@ -227,8 +227,8 @@ def getBudgets(session_token):
     entity_data = []
     # On stocke ensuite les données voulues dans un tableau.
     # Chaque entitée est créée dans une nouvelle entrée du tableau
-    for budget in response:
-        print(f"Récupération du contrat ID : {budget['id']} / {len(response)}", end="\r", flush=True)
+    for i, budget in enumerate(response):
+        print(f"Récupération du contrat ID : {i} / {len(response)}", end="\r", flush=True)
         entity_tmp = {}
         entity_tmp['budget_id'] = budget['id']
         entity_tmp['entity_id'] = budget['entities_id']
@@ -247,8 +247,6 @@ def getBudgets(session_token):
         entity_tmp['total_remaining_budget'] = entity_tmp['total_budget_allowed'] - entity_tmp['total_budget_spent']
         # ajout des données au tableau principal
         entity_data.append(entity_tmp)
-
-
 
     return True, entity_data
 
