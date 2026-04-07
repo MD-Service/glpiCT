@@ -16,7 +16,8 @@ PROFIL_CONSULTATION_BUDGET: ""
 # pour le retrouver, lancer un navigateur Web avec le menu développeur, dans l'onglet réseau,
 # cliquer sur une page glpi, et affichez les cookies de la page.
 #cookie_glpi: "glpi_203f8090b9bdc5d960abb0e1aa34c05f" #GLPI 10.0.7
-cookie_glpi: "glpi_6351febeaae63f5f0de9eb2e23ce5b1b" #GLPI 10.0.10
+#cookie_glpi: "glpi_6351febeaae63f5f0de9eb2e23ce5b1b" #GLPI 10.0.10
+cookie_glpi: glpi_7caf5d72e3d3710d5a228cb5deaf2eb6fa52c255498960df81fd98f1a25897d62288c5087ced8263d758d61f7c43d45310a8b516f2a5d1897cb5d45388e9f432 #GLPI 11.0.6
 
 # ne pas toucher, utilisé pour le parsing
 total_spent_budget: "Total dépensé sur le budget"
